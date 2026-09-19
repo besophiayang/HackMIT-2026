@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Go2: connect and run starter",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\run_robot.ps1",
+        "-RobotIp",
+        "${input:robotIp}"
+      ],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "robotIp",
+      "type": "promptString",
+      "description": "Go2 IP address from the Unitree app/router"
+    }
+  ]
+}
