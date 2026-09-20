@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080b10" />
+    <title>Skinless — Go2 Spatial Touch</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+    </script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><h1>Skinless</h1><p>ML spatial touch</p></div></div>
+        <div class="actions">
+          <span class="status" id="status"><span></span>Loading</span>
+          <button id="demo" type="button">Demo touch</button>
+        </div>
+      </header>
+      <section class="spatial-panel">
+        <div class="heading">
+          <div><p class="eyebrow">Spatial view</p><h2>Front / head ← Unitree Go2 exterior shell → Rear</h2></div>
+          <div class="prediction" aria-live="polite"><span id="touch-type">Waiting for touch</span><strong id="touch-detail">—</strong></div>
+        </div>
+        <div id="model-view" class="model-view" aria-label="Interactive point-cloud model of the Unitree Go2">
+          <div id="loading" class="loading">Loading 3D model…</div>
+        </div>
+        <div id="sensor-strip" class="sensor-strip" aria-label="Live piezo activity"></div>
+        <p class="hint">Drag the robot to rotate · scroll to zoom · moving touches leave a short fading heat trail</p>
+      </section>
+      <footer id="message">Connecting to the local inference server…</footer>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,139 @@
+{
+  "scope": "Replay of existing recordings, including training data; not a new held-out accuracy estimate.",
+  "recordings": 700,
+  "correlation": [
+    [
+      1.0,
+      -0.00122,
+      0.01181,
+      0.01238,
+      -0.00128
+    ],
+    [
+      -0.00122,
+      1.0,
+      0.00883,
+      0.00864,
+      0.99221
+    ],
+    [
+      0.01181,
+      0.00883,
+      1.0,
+      0.99807,
+      0.00789
+    ],
+    [
+      0.01238,
+      0.00864,
+      0.99807,
+      1.0,
+      0.00773
+    ],
+    [
+      -0.00128,
+      0.99221,
+      0.00789,
+      0.00773,
+      1.0
+    ]
+  ],
+  "gpio6_gpio7_equal_fraction": 0.948952380952381,
+  "gpio5_gpio15_equal_fraction": 0.5436142857142857,
+  "batch_gate_evaluation_seconds": 0.04697610001312569,
+  "recording_detection_fraction": {
+    "rear_left_side": 0.6666666666666666,
+    "rear_right_side": 0.6083333333333333,
+    "rear_top_butt": 0.6583333333333333,
+    "front_right_side": 0.7166666666666667,
+    "front_left_side": 0.43333333333333335
+  },
+  "idle_positive_frame_fraction": 0.007321428571428572,
+  "high_confidence_onset_recording_fraction": {
+    "rear_left_side": 0.675,
+    "rear_right_side": 0.6333333333333333,
+    "rear_top_butt": 0.675,
+    "front_right_side": 0.7166666666666667,
+    "front_left_side": 0.49166666666666664
+  },
+  "high_confidence_onset_idle_frame_fraction": 0.009285714285714286,
+  "isolated_channel_anchors": [
+    {
+      "pin": 4,
+      "u": 0.8,
+      "v": 0.75
+    },
+    {
+      "pin": 5,
+      "u": 0.8,
+      "v": 0.25
+    },
+    {
+      "pin": 6,
+      "u": 0.82,
+      "v": 0.02
+    },
+    {
+      "pin": 7,
+      "u": 0.24,
+      "v": 0.25
+    },
+    {
+      "pin": 15,
+      "u": 0.24,
+      "v": 0.75
+    }
+  ],
+  "synthetic_gain_corrected_interpolation": {
+    "left": [
+      0.24,
+      0.2832,
+      0.306,
+      0.3284,
+      0.3505,
+      0.3726,
+      0.3949,
+      0.4182,
+      0.4462,
+      0.489,
+      0.543,
+      0.5824,
+      0.611,
+      0.6371,
+      0.6628,
+      0.6886,
+      0.7146,
+      0.7408,
+      0.7672,
+      0.7938,
+      0.8
+    ],
+    "right": [
+      0.24,
+      0.2853,
+      0.3135,
+      0.3417,
+      0.3698,
+      0.3979,
+      0.4259,
+      0.4537,
+      0.4813,
+      0.5084,
+      0.535,
+      0.5617,
+      0.589,
+      0.6166,
+      0.6442,
+      0.6716,
+      0.6989,
+      0.7262,
+      0.7534,
+      0.7807,
+      0.8
+    ]
+  },
+  "gate_ms_p50_p95": [
+    1.356099994154647,
+    2.2180199957801956
+  ]
+}
