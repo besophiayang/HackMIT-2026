@@ -25,6 +25,7 @@ class SpatialEstimate:
     confidence: float
     location: str
     probabilities: dict[str, float]
+    side: str | None
 
 
 class SpatialFingerprintTracker:
@@ -89,11 +90,11 @@ class SpatialFingerprintTracker:
         right = sum(values[p.channel] for p in self.by_channel if 0.08 <= p.v <= 0.42)
         top = sum(values[p.channel] for p in self.by_channel if p.v < 0.08 or p.v > 0.92)
         candidate: str | None = None
-        if left > right * 1.22 and left > top * 0.72:
+        if left > right * 1.05 and left > top * 0.72:
             candidate = "left"
-        elif right > left * 1.22 and right > top * 0.72:
+        elif right > left * 1.05 and right > top * 0.72:
             candidate = "right"
-        elif top > max(left, right) * 1.35:
+        elif top > max(left, right) * 1.20:
             candidate = "top"
 
         return self._commit_side(candidate)
@@ -109,7 +110,9 @@ class SpatialFingerprintTracker:
             self._side_candidate_count = 1
         else:
             self._side_candidate_count += 1
-        required = 2 if self._locked_side is None else 4
+        # Lock immediately at touch onset, then require persistent contrary
+        # evidence before crossing the torso during one continuous stroke.
+        required = 1 if self._locked_side is None else 6
         if candidate is not None and self._side_candidate_count >= required:
             self._locked_side = candidate
             self._side_candidate = None
@@ -310,6 +313,14 @@ class SpatialFingerprintTracker:
         if float(np.max(values) / (np.sum(values) + 1e-12)) > 0.95:
             anchor = self.by_channel[int(np.argmax(values))]
             u, v = anchor.u, anchor.v
+            stable_side = 'top' if anchor.v < .08 or anchor.v > .92 else ('left' if anchor.v > .5 else 'right')
+        # The torso surface is cylindrical: mirror an ambiguous opposite-side
+        # estimate back onto the side supported by the current event. This
+        # preserves height/top transitions while forbidding cross-body heat.
+        if stable_side == 'left' and v < .5:
+            v = 1.0-v
+        elif stable_side == 'right' and v > .5:
+            v = 1.0-v
         distance = [(p.u-u)**2 + (((p.v-v+0.5)%1)-0.5)**2 for p in self.by_channel]
         nearest = self.by_channel[int(np.argmin(distance))].name
         return SpatialEstimate(
@@ -318,4 +329,5 @@ class SpatialFingerprintTracker:
             confidence=float(np.max(probabilities)),
             location=nearest,
             probabilities={name: float(value) for name, value in zip(self.names, probabilities, strict=True)},
+            side=stable_side,
         )

@@ -95,7 +95,25 @@ class SurfaceTests(unittest.TestCase):
                     result=tracker.estimate(values*tracker.sensor_scales)
                     positions.append(result.u)
                     self.assertLess(abs(result.v-v),.1)
+                    self.assertEqual(result.side,'left' if v>.5 else 'right')
                 self.assertTrue(np.all(np.diff(positions)*np.sign(fractions[-1]-fractions[0])>=-.005))
+
+    def test_side_lock_mirrors_opposite_side_leakage(self):
+        tracker=SpatialFingerprintTracker.from_real_dataset(5,BodySurfaceMap.load())
+        tracker.motion_model=None
+        # Start unambiguously on the left, then inject several frames whose
+        # opposite-side energy would otherwise move heat through the torso.
+        first=tracker.estimate(np.array([80,0,0,0,30])*tracker.sensor_scales)
+        self.assertEqual(first.side,'left')
+        for _ in range(5):
+            result=tracker.estimate(np.array([20,45,0,35,25])*tracker.sensor_scales)
+            self.assertEqual(result.side,'left')
+            self.assertGreaterEqual(result.v,.5)
+        # Persistent contrary evidence may intentionally cross sides.
+        for _ in range(6):
+            result=tracker.estimate(np.array([0,80,0,30,0])*tracker.sensor_scales)
+        self.assertEqual(result.side,'right')
+        self.assertLessEqual(result.v,.5)
 
     def test_measured_surface_interpolation(self):
         with TemporaryDirectory() as folder:

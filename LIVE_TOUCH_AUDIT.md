@@ -35,6 +35,13 @@ are still used. The motion artifact was retrained using the current gain scaling
 | Idle heat | The recorded no-touch-trained presence gate and robust startup/adaptive noise estimate remain active. Replay still shows false positives; they are not eliminated. |
 | Orbit/contrast | Camera-up previously changed after orbit controls initialized. Both now use the conventional Y-up basis and normal drag direction. Heat is red-to-white against a subdued cyan shell, with strength-dependent brightness and frame-by-frame 180 ms decay. |
 
+The active-event side tracker now locks immediately to left/right/top evidence.
+Left estimates are constrained to the left surface hemisphere and right estimates
+to the right hemisphere. Six consecutive contrary updates are required before a
+real around-body crossing is accepted. The renderer uses a 24-point interpolated
+trail with a 580 ms maximum lifetime and exponential fade, while contact onset
+remains immediate. The **Demo stroke** button previews the left-side trail.
+
 The actual stream measured about **665–677 samples/second**, not the configured
 nominal 1000. Twelve samples span about 18 ms; 32 span about 48 ms. These are
 trailing windows, not additional windows collected after a trigger. Latest-state

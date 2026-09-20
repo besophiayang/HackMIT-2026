@@ -11,6 +11,7 @@ const detailElement = document.querySelector("#touch-detail");
 const sensorStrip = document.querySelector("#sensor-strip");
 const sensorPins = [4,5,6,7,15];
 sensorStrip.innerHTML = sensorPins.map((pin,index) => `<span class="sensor-meter" data-channel="${index}">GPIO${pin}<i></i></span>`).join('');
+document.querySelectorAll('.sensor-meter').forEach((meter) => meter.style.setProperty('--level','0'));
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -48,6 +49,9 @@ let lastArrival = 0;
 let lastDiagnosticUpdate = 0;
 let demoPreview = null;
 let demoUntil = 0;
+let demoStart = 0;
+const HEAT_SLOTS = 24;
+const HEAT_LIFETIME = 0.58;
 const surfaceCache = new Map();
 const surfaceMeshes = [];
 const raycaster = new THREE.Raycaster();
@@ -145,10 +149,10 @@ function buildPointCloud(model) {
   geometry.setAttribute('surfaceAngle', new THREE.Float32BufferAttribute(surfaceAngle,1));
   heatUniforms = {
     uCount: { value: 0 },
-    uCenters: { value: Array.from({ length: 8 }, () => new THREE.Vector3()) },
-    uRadii: { value: new Float32Array(8) },
-    uStrengths: { value: new Float32Array(8) },
-    uAngles: { value: new Float32Array(8) },
+    uCenters: { value: Array.from({ length: HEAT_SLOTS }, () => new THREE.Vector3()) },
+    uRadii: { value: new Float32Array(HEAT_SLOTS) },
+    uStrengths: { value: new Float32Array(HEAT_SLOTS) },
+    uAngles: { value: new Float32Array(HEAT_SLOTS) },
   };
   const material = new THREE.ShaderMaterial({
     uniforms: heatUniforms,
@@ -157,15 +161,15 @@ function buildPointCloud(model) {
     depthTest: true,
     vertexShader: `
       uniform int uCount;
-      uniform vec3 uCenters[8];
-      uniform float uRadii[8];
-      uniform float uStrengths[8];
-      uniform float uAngles[8];
+      uniform vec3 uCenters[24];
+      uniform float uRadii[24];
+      uniform float uStrengths[24];
+      uniform float uAngles[24];
       attribute float surfaceAngle;
       varying float vHeat;
       void main() {
         float heat = 0.0;
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 24; i++) {
           if (i < uCount) {
             float radius = max(uRadii[i], 0.0001);
             float distanceSquared = dot(position - uCenters[i], position - uCenters[i]);
@@ -230,14 +234,14 @@ function buildSensorMarkers() {
 function updateHeat() {
   if (!pointCloud || !heatUniforms) return;
   const now = Date.now() / 1000;
-  touchTrail = touchTrail.filter((touch) => now - touch.time < 0.18).slice(-8);
+  touchTrail = touchTrail.filter((touch) => now - touch.time < HEAT_LIFETIME).slice(-HEAT_SLOTS);
   const baseRadius = modelBounds.getSize(new THREE.Vector3()).length() * 0.030;
   heatUniforms.uCount.value = touchTrail.length;
-  for (let index = 0; index < 8; index += 1) {
+  for (let index = 0; index < HEAT_SLOTS; index += 1) {
     const touch = touchTrail[index];
     if (touch) {
       const age = now - touch.time;
-      const decay = Math.max(0, 1 - age / 0.18);
+      const decay = Math.exp(-age / 0.24) * Math.max(0, 1-age/HEAT_LIFETIME);
       heatUniforms.uCenters.value[index].copy(touch.center);
       heatUniforms.uAngles.value[index] = touch.v * Math.PI * 2;
       heatUniforms.uRadii.value[index] = baseRadius * (0.72 + 0.9 * (touch.area || 0));
@@ -252,6 +256,8 @@ function updateHeat() {
 function showPrediction(prediction) {
   if (!prediction || !Number.isFinite(prediction.u) || !Number.isFinite(prediction.v)) return;
   const now = Date.now() / 1000;
+  if (prediction.surface_side === 'left' && prediction.v < 0.5) prediction.v = 1-prediction.v;
+  if (prediction.surface_side === 'right' && prediction.v > 0.5) prediction.v = 1-prediction.v;
   if (prediction.event_id !== undefined && prediction.event_id !== lastEventId) {
     activeTouch = null;
     touchTrail = [];
@@ -268,9 +274,10 @@ function showPrediction(prediction) {
     const du = prediction.u - activeTouch.u;
     const dv = ((prediction.v - activeTouch.v + 1.5) % 1) - 0.5;
     movementSpeed = Math.hypot(du, dv) / elapsed;
-    activeTouch.u += (prediction.u - activeTouch.u) * 0.88;
+    const alpha = 1-Math.exp(-elapsed/0.028);
+    activeTouch.u += (prediction.u - activeTouch.u) * alpha;
     const wrappedV = ((prediction.v - activeTouch.v + 1.5) % 1) - 0.5;
-    activeTouch.v = (activeTouch.v + wrappedV * 0.88 + 1) % 1;
+    activeTouch.v = (activeTouch.v + wrappedV * alpha + 1) % 1;
     activeTouch.confidence = prediction.location_confidence;
     activeTouch.intensity = prediction.intensity;
     activeTouch.area = prediction.contact_area;
@@ -281,8 +288,20 @@ function showPrediction(prediction) {
       intensity: prediction.intensity, area: prediction.contact_area, time: now,
     };
   }
-  touchTrail.push({ ...activeTouch, time: now, center: surfacePosition(activeTouch) });
-  touchTrail = touchTrail.slice(-8);
+  const newest = { ...activeTouch, time: now, center: surfacePosition(activeTouch) };
+  const previous = touchTrail[touchTrail.length-1];
+  if (previous) {
+    for (let step=1; step<=2; step+=1) {
+      const fraction=step/3;
+      const vDelta=((newest.v-previous.v+1.5)%1)-0.5;
+      const point={...newest,u:previous.u+(newest.u-previous.u)*fraction,
+        v:(previous.v+vDelta*fraction+1)%1,time:previous.time+(now-previous.time)*fraction};
+      point.center=surfacePosition(point);
+      touchTrail.push(point);
+    }
+  }
+  touchTrail.push(newest);
+  touchTrail = touchTrail.slice(-HEAT_SLOTS);
   const displayNames = {
     pat_stroke: "Pat / stroke",
     tap_poke: "Tap / poke",
@@ -337,10 +356,10 @@ function connectState() {
 }
 
 document.querySelector("#demo").addEventListener("click", () => {
-  const placement = placements[Math.floor(Math.random() * placements.length)];
-  if (!placement) return;
-  demoPreview = { ...placement, intensity: 0.85, contact_area: 0.3, touch_type: "demo touch", touch_confidence: 0.94, location_confidence: 0.9 };
-  demoUntil = Date.now() / 1000 + 2;
+  demoStart = Date.now()/1000;
+  demoPreview = { u:.24,v:.75,surface_side:'left',intensity:.85,contact_area:.3,
+    touch_type:"demo stroke",touch_confidence:.94,location_confidence:.9 };
+  demoUntil = demoStart + 2;
 });
 async function initialize() {
   const mapResponse = await fetch("./assets/sensor-map.json", { cache: "no-store" });
@@ -378,14 +397,14 @@ function animate() {
   requestAnimationFrame(animate);
   controls.update();
   if (demoPreview && Date.now()/1000 < demoUntil) {
-    showPrediction({ ...demoPreview, timestamp: Date.now()/1000 });
+    const clock=Date.now()/1000;
+    const progress=Math.min(1,(clock-demoStart)/1.35);
+    showPrediction({ ...demoPreview,u:.24+.56*progress,timestamp:clock });
   }
-  if (Date.now() / 1000 - lastPredictionTimestamp > 0.18) {
+  if (activeTouch && Date.now() / 1000 - lastPredictionTimestamp > 0.12) {
     activeTouch = null;
-    touchTrail = [];
     typeElement.textContent = "Waiting for touch";
     detailElement.textContent = "—";
-    updateHeat();
   }
   updateHeat(); // fade every rendered frame, including when packets stop
   renderer.render(scene, camera);

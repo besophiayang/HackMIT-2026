@@ -146,6 +146,7 @@ def main():
                         touch_confidence=float(label['confidence']) if current else 0.0,
                         location=estimate.location,location_confidence=estimate.confidence,
                         u=estimate.u,v=estimate.v,intensity=intensity,contact_area=area,
+                        surface_side=estimate.side,
                         fast_contact_confidence=probability,strengths=strengths.tolist(),
                         event_id=event,timestamp=time.time())
                 compute_times.append((time.perf_counter()-begin)*1000)
